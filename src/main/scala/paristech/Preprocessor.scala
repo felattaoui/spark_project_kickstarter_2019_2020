@@ -56,7 +56,7 @@ object Preprocessor {
 
     // Chargement des données
 
-    val pathToData = "/home/farid/IdeaProjects/spark_project_kickstarter_2019_2020/data"
+    val pathToData= "./data"
 
     val df: DataFrame = spark
       .read
@@ -137,6 +137,7 @@ object Preprocessor {
       .show(50)
 
     // Création de deux udfs nommées udf_country et udf_currency telles que :
+
     def cleanCountry(country: String, currency: String): String = {
       if (country == "False")
         currency
@@ -168,7 +169,7 @@ object Preprocessor {
     // ou encore, en utilisant sql.functions.when:
 
     // Autre façon de faire : en utilisant sql.functions.when
-    // la ligne de code est commentée car nous avons déjà executé l'opération
+    // la ligne de code est commentée car nous avons déjà executé l'opération, toutefois ça fonctionne.
 /*
     dfNoFutur
       .withColumn("country2", when($"country" === "False", $"currency").otherwise($"country"))
@@ -230,11 +231,10 @@ object Preprocessor {
       .na.fill("unknown", Seq("currency2"))
 
     println("Affichage du dataframe final avant de le transformer en fichier parquet")
-
     finalDataFrame.show(10)
 
-    println("Sauvegarde du DataFrame au format parquet")
 
+    println("Sauvegarde du DataFrame au format parquet")
     finalDataFrame.write.mode("overwrite").parquet(s"$pathToData/FinalDataFrame")
 
 

@@ -59,11 +59,14 @@ object Trainer {
 
     // import du dataset donné pour le TP3
 
+    val pathToData= "./data"
+
     val df: DataFrame = spark
       .read
       .option("header", true) // utilise la première ligne du (des) fichier(s) comme header
       .option("inferSchema", "true") // pour inférer le type de chaque colonne (Int, String, etc.)
-      .parquet("/home/farid/IdeaProjects/spark_project_kickstarter_2019_2020/data/prepared_trainingset")
+      //.parquet("/home/farid/IdeaProjects/spark_project_kickstarter_2019_2020/data/prepared_trainingset")
+      .parquet(s"$pathToData/prepared_trainingset")
 
     println("Training Dataframe")
     df.show()
@@ -172,7 +175,7 @@ object Trainer {
     //println(s"Model 1 was fit using parameters: ${model.parent.extractParamMap}")
 
 
-    // Grid-search pour trouver les hyperparametres optimaux en utilisant l'évaluateur lr
+    // Grid-search l'objectif est de trouver les meilleurs hyperparamètres pour le modèle
 
     val paramGrid = new ParamGridBuilder()
       .addGrid(lr.regParam, Array(10e-8, 10e-6, 10e-4, 10e-2))
@@ -196,23 +199,26 @@ object Trainer {
 
     // Entrainement du modèle avec l'échantillon training
 
-
     println("Entrainement du modèle avec l'échantillon training")
 
     val validationModel = trainValidationSplit.fit(training)
 
     // Evaluation modèle avec l'échantillon test
 
-    val dfWithPredictions = validationModel.transform(test).select("features","final_status","predictions")
-    dfWithPredictions.show(5)
+    val dfWithPredictions = validationModel
+      .transform(test)
+      .select("features","final_status","predictions")
 
+    // affichage
+    println("Affichage des prédictions")
+    dfWithPredictions.show(5)
     val score=evaluator.evaluate(dfWithPredictions)
 
     dfWithPredictions.groupBy("final_status","predictions").count.show()
 
     println("F1 Score est " + score)
 
-    // Evaluer la precision (accuracy)
+    // Evaluation du modèle via la metric "accuracy"
     val evaluator_acc = new MulticlassClassificationEvaluator()
       .setLabelCol("final_status")
       .setPredictionCol("predictions")
@@ -224,7 +230,7 @@ object Trainer {
 
     // Save model
 
-    validationModel.write.overwrite.save("/home/farid/IdeaProjects/spark_project_kickstarter_2019_2020/model/LogisticRegression")
+    validationModel.write.overwrite.save("./model/LogisticRegression")
 
   }
 }
