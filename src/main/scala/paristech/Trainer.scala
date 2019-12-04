@@ -65,7 +65,6 @@ object Trainer {
       .read
       .option("header", true) // utilise la première ligne du (des) fichier(s) comme header
       .option("inferSchema", "true") // pour inférer le type de chaque colonne (Int, String, etc.)
-      //.parquet("/home/farid/IdeaProjects/spark_project_kickstarter_2019_2020/data/prepared_trainingset")
       .parquet(s"$pathToData/prepared_trainingset")
 
     println("Training Dataframe")
@@ -151,7 +150,7 @@ object Trainer {
       .setRawPredictionCol("raw_predictions")
       .setThresholds(Array(0.7, 0.3))
       .setTol(1.0e-6)
-      .setMaxIter(300)
+      .setMaxIter(50)
 
 
     //////////////////////////////////////////////////////////////////////////////
@@ -210,7 +209,7 @@ object Trainer {
       .select("features","final_status","predictions")
 
     // affichage
-    println("Affichage des prédictions")
+    println("Voici les prédictions")
     dfWithPredictions.show(5)
     val score=evaluator.evaluate(dfWithPredictions)
 
@@ -230,7 +229,7 @@ object Trainer {
 
     // Save model
 
-    validationModel.write.overwrite.save("./model/LogisticRegression")
+    validationModel.write.overwrite.save(s"$pathToData/LogisticRegression")
 
   }
 }

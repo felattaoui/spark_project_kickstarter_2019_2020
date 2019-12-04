@@ -88,11 +88,6 @@ object Preprocessor {
       .withColumn("backers_count", $"backers_count".cast("Int"))
       .withColumn("final_status", $"final_status".cast("Int"))
 
-    println("Schéma du DataFrame dfCasted")
-    dfCasted.printSchema()
-    println("\n")
-
-
 
     println("Phase de cleaning des données")
     println("Affichage d'une description statistique des colonnes de type Int :")
@@ -114,17 +109,12 @@ object Preprocessor {
     dfCasted.groupBy("country", "currency").count.orderBy($"count".desc)
 
 
-
     // "Suppression de la colonne disable_communication qui ne contient majoritairement que des false, on crée un nouveau dataFrame : df2"
     val df2: DataFrame = dfCasted.drop("disable_communication")
     println("Affichage du dataframe après la phase de cleaning")
-    println("\n")
-    df2.show()
 
-    println("Les fuites du futur")
     // Pour enlever les données du futur on retire les colonnes backers_count et state_changed_at, on crée un nouveau dataFrame : dfNoFutur
     val dfNoFutur: DataFrame = df2.drop("backers_count", "state_changed_at")
-    dfNoFutur.show(10)
 
     // Colonnes currency et country
     // Nous avons semble-t-il des inversions entre ces deux colonnes et du nettoyage à faire
@@ -134,7 +124,6 @@ object Preprocessor {
       .groupBy("currency")
       .count
       .orderBy($"count".desc)
-      .show(50)
 
     // Création de deux udfs nommées udf_country et udf_currency telles que :
 
@@ -177,30 +166,26 @@ object Preprocessor {
       .drop("country", "currency")
     dfNoFutur.show(10)
 */
+
     // Retrait des valeurs dont le final status n'est pas 0 ou 1 dont le nombre est :
     println(s"Nombre de lignes avant suppression : ${dfCountry.count}")
 
     //suppression
 
     val dfCountryFiltered = dfCountry.where("final_status<2")
-    dfCountryFiltered.show(15)
     println(s"Nombre de lignes apres suppression : ${dfCountryFiltered.count}")
 
-    println("\n")
     // Ajouter et manipuler des colonnes"
-
     // "Ajout d'une colonne days_campaign qui représente la durée de la campagne en jours (le nombre de jours entre launched_at et deadline)
 
-    println("Ajout d'une colonne days_campaign qui représente la durée de la campagne en jours (le nombre de jours entre launched_at et deadline).")
+    println("\n")
     val dfCountryFiltered2 = dfCountryFiltered.withColumn("days_campaign", ((col("deadline") - col("launched_at"))/86400).cast("Int"))
-    dfCountryFiltered2.show()
 
     println("Ajout d'une colonne hours_prepa qui représente le nombre d’heures de préparation de la campagne entre created_at et launched_at")
 
     val dfCountryFiltered3 = dfCountryFiltered2.withColumn("hours_prepa", round(((col("launched_at") - col("created_at"))/3600),3))
-    dfCountryFiltered3.show()
 
-    dfCountryFiltered3.drop("launched_at").drop("created_at").drop("deadline").show()
+    dfCountryFiltered3.drop("launched_at").drop("created_at").drop("deadline")
 
     // Mettons les colonnes name, desc, et keywords en minuscules
 
@@ -209,15 +194,10 @@ object Preprocessor {
     .withColumn("desc", lower(col("desc")))
     .withColumn("keywords", lower(col("keywords")))
 
-    println("Affichage du dataFrame avec les majuscules transformées en minuscules dans les colonnes textuelles")
-    dfCountryFiltered4.show()
-
     println("Concaténation des colonnes textuelles en une seule colonne text")
 
    val dfCountryFiltered5: DataFrame = dfCountryFiltered4
      .withColumn("text", concat($"name", lit(" "), $"desc", lit(" "), $"keywords"))
-
-    dfCountryFiltered5.show(10)
 
 
     // "Valeurs nulles"
@@ -230,9 +210,8 @@ object Preprocessor {
       .na.fill("unknown", Seq("country2"))
       .na.fill("unknown", Seq("currency2"))
 
-    println("Affichage du dataframe final avant de le transformer en fichier parquet")
+    println("Affichage du dataframe final avant de le transformer au format parquet")
     finalDataFrame.show(10)
-
 
     println("Sauvegarde du DataFrame au format parquet")
     finalDataFrame.write.mode("overwrite").parquet(s"$pathToData/FinalDataFrame")
