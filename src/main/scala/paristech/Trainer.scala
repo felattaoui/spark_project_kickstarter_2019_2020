@@ -168,12 +168,27 @@ object Trainer {
 
     val Array(training, test) = df.randomSplit(Array(0.9, 0.1), seed = 1984)
 
+    //******************************************************************************
+    // Modèle simple
+    //******************************************************************************
+    val trainModelSimple = pipeline.fit(training)
+    val dfWithSimplePredictions = trainModelSimple.transform(test)
+    println("Résultats de la prédiction avec le modèle simple : ")
+    dfWithSimplePredictions.groupBy("final_status", "predictions").count.show()
 
-    //training.show(10)
-    //val model = pipeline.fit(training)
-    //println(s"Model 1 was fit using parameters: ${model.parent.extractParamMap}")
+    //Pour calculer le f1-score du modèle, on utilise l'évaluateur de la classification multiple
+    val eval = new MulticlassClassificationEvaluator().setMetricName("f1")
+      .setLabelCol("final_status")
+      .setPredictionCol("predictions")
+
+    val f1_score_simple = eval.evaluate(dfWithSimplePredictions)
+    println(s"Le F1 score du modèle simple ====>  : $f1_score_simple")
+    println("\n")
 
 
+    //******************************************************************************
+    // Modèle avec grille
+    //******************************************************************************
     // Grid-search l'objectif est de trouver les meilleurs hyperparamètres pour le modèle
 
     val paramGrid = new ParamGridBuilder()
@@ -182,7 +197,7 @@ object Trainer {
       .build()
 
 
-    // Creation d'un évaluateur pour classification non binaire
+    // Creation d'un évaluateur pour la classification non binaire
 
     val evaluator = new MulticlassClassificationEvaluator()
       .setMetricName("f1")
@@ -194,40 +209,42 @@ object Trainer {
       .setEstimator(pipeline)
       .setEvaluator(evaluator)
       .setEstimatorParamMaps(paramGrid)
-      .setTrainRatio(0.7)
+      .setTrainRatio(0.7) // 70% des données seront utilisées pour le train et 30% pour la validation
 
     // Entrainement du modèle avec l'échantillon training
-
-    println("Entrainement du modèle avec l'échantillon training")
+    println("Entrainement du modèle avec grille")
 
     val validationModel = trainValidationSplit.fit(training)
 
-    // Evaluation modèle avec l'échantillon test
+    // Evaluation du modèle avec l'échantillon de test
 
     val dfWithPredictions = validationModel
       .transform(test)
       .select("features","final_status","predictions")
 
-    // affichage
+    // affichage du f1 score
+
     println("Voici les prédictions")
     dfWithPredictions.show(5)
     val score=evaluator.evaluate(dfWithPredictions)
 
     dfWithPredictions.groupBy("final_status","predictions").count.show()
 
-    println("F1 Score est " + score)
+    println("F1 Score du modèle avec grille ====> " + score)
 
     // Evaluation du modèle via la metric "accuracy"
+
     val evaluator_acc = new MulticlassClassificationEvaluator()
       .setLabelCol("final_status")
       .setPredictionCol("predictions")
       .setMetricName("accuracy")
 
     // obtention de la mesure de performance
-    val accuracy = evaluator_acc.evaluate(dfWithPredictions)
-    println("Precision obtenue : " + accuracy)
 
-    // Save model
+    val accuracy = evaluator_acc.evaluate(dfWithPredictions)
+    println("Precision obtenue 'accuracy' : " + accuracy)
+
+    // Sauvegarde du modèle
 
     validationModel.write.overwrite.save(s"$pathToData/LogisticRegression")
 

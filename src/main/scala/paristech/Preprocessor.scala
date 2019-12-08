@@ -98,7 +98,7 @@ object Preprocessor {
       .show
 
     // Clean des données
-    // (J'ai juste retiré les .show après avoir compris de quoi il s'agissait pour plus de lisibilité)
+    // (J'ai juste retiré les .show après avoir compris de quoi il s'agissait pour plus de lisibilité sur la console)
     dfCasted.groupBy("disable_communication").count.orderBy($"count".desc)
     dfCasted.groupBy("country").count.orderBy($"count".desc)
     dfCasted.groupBy("currency").count.orderBy($"count".desc)
@@ -155,34 +155,30 @@ object Preprocessor {
     println("DataFrame après clean via deux udf")
     dfCountry.show(10)
 
-    // ou encore, en utilisant sql.functions.when:
 
     // Autre façon de faire : en utilisant sql.functions.when
     // la ligne de code est commentée car nous avons déjà executé l'opération, toutefois ça fonctionne.
-/*
-    dfNoFutur
-      .withColumn("country2", when($"country" === "False", $"currency").otherwise($"country"))
-      .withColumn("currency2", when($"country".isNotNull && length($"currency") =!= 3, null).otherwise($"currency"))
-      .drop("country", "currency")
-    dfNoFutur.show(10)
-*/
+    // En utilisant sql.functions.when (en performance les fonctions sql sont meilleurs que les udf en général) :
+
+    /*
+        dfNoFutur
+          .withColumn("country2", when($"country" === "False", $"currency").otherwise($"country"))
+          .withColumn("currency2", when($"country".isNotNull && length($"currency") =!= 3, null).otherwise($"currency"))
+          .drop("country", "currency")
+        dfNoFutur.show(10)
+    */
 
     // Retrait des valeurs dont le final status n'est pas 0 ou 1 dont le nombre est :
     println(s"Nombre de lignes avant suppression : ${dfCountry.count}")
-
     //suppression
-
     val dfCountryFiltered = dfCountry.where("final_status<2")
     println(s"Nombre de lignes apres suppression : ${dfCountryFiltered.count}")
 
     // Ajouter et manipuler des colonnes"
     // "Ajout d'une colonne days_campaign qui représente la durée de la campagne en jours (le nombre de jours entre launched_at et deadline)
-
-    println("\n")
     val dfCountryFiltered2 = dfCountryFiltered.withColumn("days_campaign", ((col("deadline") - col("launched_at"))/86400).cast("Int"))
 
-    println("Ajout d'une colonne hours_prepa qui représente le nombre d’heures de préparation de la campagne entre created_at et launched_at")
-
+    // Ajout d'une colonne hours_prepa qui représente le nombre d’heures de préparation de la campagne entre created_at et launched_at
     val dfCountryFiltered3 = dfCountryFiltered2.withColumn("hours_prepa", round(((col("launched_at") - col("created_at"))/3600),3))
 
     dfCountryFiltered3.drop("launched_at").drop("created_at").drop("deadline")
@@ -194,14 +190,15 @@ object Preprocessor {
     .withColumn("desc", lower(col("desc")))
     .withColumn("keywords", lower(col("keywords")))
 
-    println("Concaténation des colonnes textuelles en une seule colonne text")
+    // "Concaténation des colonnes textuelles en une seule colonne text"
 
    val dfCountryFiltered5: DataFrame = dfCountryFiltered4
      .withColumn("text", concat($"name", lit(" "), $"desc", lit(" "), $"keywords"))
 
 
     // "Valeurs nulles"
-    // "Remplaçons les valeurs nulles des colonnes days_campaign, hours_prepa, et goal par la valeur -1 et par \"unknown\" pour les colonnes country2 et currency2."
+    // "Remplaçons les valeurs nulles des colonnes days_campaign, hours_prepa
+    //  Remplaçons goal par la valeur -1 et par \"unknown\" pour les colonnes country2 et currency2."
 
     val finalDataFrame: DataFrame = dfCountryFiltered5
       .na.fill(-1, Seq("days_campaign"))
@@ -215,8 +212,6 @@ object Preprocessor {
 
     println("Sauvegarde du DataFrame au format parquet")
     finalDataFrame.write.mode("overwrite").parquet(s"$pathToData/FinalDataFrame")
-
-
 
   }
 }
